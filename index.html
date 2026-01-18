@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ルーレット発表者決定 with タイマー</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        h2 {
+            color: white;
+            font-size: 32px;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .main-container {
+            display: flex;
+            gap: 60px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .roulette-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .roulette-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            margin-bottom: 40px;
+        }
+
+        .arrow {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid #ff4757;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-5px); }
+        }
+
+        .arrow.spinning {
+            animation: none;
+        }
+
+        #rouletteCanvas {
+            display: block;
+            border-radius: 50%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            background: white;
+        }
+
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+            border: 4px solid #333;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+            z-index: 5;
+        }
+
+        .timer-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .timer-display {
+            font-size: 72px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 25px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            min-width: 280px;
+            text-align: center;
+        }
+
+        .timer-display.warning {
+            color: #FFA07A;
+            animation: pulse-timer 1s infinite;
+        }
+
+        .timer-display.danger {
+            color: #ff4757;
+            animation: pulse-timer 0.5s infinite;
+        }
+
+        @keyframes pulse-timer {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .timer-label {
+            color: white;
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        #spinButton {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+        }
+
+        #spinButton:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        #spinButton:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #resetButton {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+        }
+
+        #resetButton:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .timer-btn {
+            padding: 12px 30px;
+            font-size: 16px;
+        }
+
+        #startTimer {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        #stopTimer {
+            background: linear-gradient(135deg, #ff9a00 0%, #ff6b00 100%);
+            color: white;
+        }
+
+        #resetTimer {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: white;
+        }
+
+        .timer-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .timer-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px 40px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .winner {
+            color: #ff4757;
+            animation: pulse 1s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .remaining {
+            margin-top: 20px;
+            color: white;
+            font-size: 16px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .time-up-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ff4757 0%, #ff6b6b 100%);
+            color: white;
+            padding: 40px 60px;
+            border-radius: 20px;
+            font-size: 36px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 1000;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+            display: none;
+            animation: shake 0.5s infinite;
+        }
+
+        .time-up-notification.active {
+            display: block;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+            25% { transform: translate(-50%, -50%) rotate(-3deg); }
+            75% { transform: translate(-50%, -50%) rotate(3deg); }
+        }
+
+        .time-up-notification button {
+            margin-top: 20px;
+            background: white;
+            color: #ff4757;
+            padding: 10px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .time-up-notification button:hover {
+            transform: scale(1.05);
+        }
+
+        /* メンバー編集パネル */
+        .member-edit-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .member-edit-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .member-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            height: 100vh;
+            background: white;
+            box-shadow: -5px 0 30px rgba(0,0,0,0.3);
+            transition: right 0.3s ease;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .member-panel.active {
+            right: 0;
+        }
+
+        .member-panel-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .member-panel-header h3 {
+            font-size: 20px;
+        }
+
+        .close-panel-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .member-panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .member-list {
+            list-style: none;
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .member-item span {
+            flex: 1;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .delete-member-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-member-btn:hover {
+            background: #ff6b6b;
+        }
+
+        .add-member-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .add-member-form input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .add-member-form input:focus {
+            border-color: #667eea;
+        }
+
+        .add-member-form button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .add-member-form button:hover {
+            transform: translateY(-2px);
+        }
+
+        .member-panel-footer {
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .member-panel-footer button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .save-members-btn {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: white;
+        }
+
+        .reset-default-btn {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+
+        .debug-panel {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-width: 250px;
+            display: none;
+        }
+
+        .debug-panel.active {
+            display: block;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                flex-direction: column;
+                gap: 40px;
+            }
+            
+            .member-panel {
+                width: 100%;
+                right: -100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h2>🎯 スプリントレビュー発表者ルーレット 🎯</h2>
+    
+    <!-- メンバー編集ボタン -->
+    <button class="member-edit-btn" onclick="openMemberPanel()">⚙️ メンバー編集</button>
+    
+    <div class="main-container">
+        <!-- ルーレットセクション -->
+        <div class="roulette-section">
+            <div class="roulette-container">
+                <div class="arrow" id="arrow"></div>
+                <canvas id="rouletteCanvas" width="400" height="400"></canvas>
+                <div class="center-circle">START</div>
+            </div>
+
+            <div class="button-container">
+                <button id="spinButton" onclick="spinRoulette()">ルーレットを回す</button>
+                <button id="resetButton" onclick="resetRoulette()">リセット</button>
+            </div>
+
+            <div class="result">
+                <div id="resultText" class="result-text">ボタンを押してスタート！</div>
+            </div>
+
+            <div class="remaining">
+                <span id="remainingText">残り: 0人</span>
+            </div>
+        </div>
+
+        <!-- タイマーセクション -->
+        <div class="timer-section">
+            <div class="timer-label">発表時間 (10分)</div>
+            <div class="timer-display" id="timerDisplay">10:00</div>
+            <div class="timer-controls">
+                <button class="timer-btn" id="startTimer" onclick="startTimer()">スタート</button>
+                <button class="timer-btn" id="stopTimer" onclick="stopTimer()">一時停止</button>
+                <button class="timer-btn" id="resetTimer" onclick="resetTimer()">リセット</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- オーバーレイ -->
+    <div class="overlay" id="overlay" onclick="closeMemberPanel()"></div>
+
+    <!-- メンバー編集パネル -->
+    <div class="member-panel" id="memberPanel">
+        <div class="member-panel-header">
+            <h3>👥 メンバー編集</h3>
+            <button class="close-panel-btn" onclick="closeMemberPanel()">×</button>
+        </div>
+        <div class="member-panel-content">
+            <div class="add-member-form">
+                <input type="text" id="newMemberInput" placeholder="名前を入力" onkeypress="handleAddMemberKeypress(event)">
+                <button onclick="addMember()">追加</button>
+            </div>
+            <ul class="member-list" id="memberList">
+                <!-- メンバーリストはJSで生成 -->
+            </ul>
+        </div>
+        <div class="member-panel-footer">
+            <button class="reset-default-btn" onclick="resetToDefault()">初期値に戻す</button>
+            <button class="save-members-btn" onclick="saveMembersAndClose()">保存して閉じる</button>
+        </div>
+    </div>
+
+    <div class="debug-panel" id="debugPanel">
+        <div id="debugInfo"></div>
+    </div>
+
+    <!-- 時間切れ通知 -->
+    <div class="time-up-notification" id="timeUpNotification">
+        <div>⏰ 時間終了！⏰</div>
+        <div style="font-size: 24px; margin-top: 10px;">10分経過しました</div>
+        <button onclick="dismissTimeUpNotification()">OK</button>
+    </div>
+
+    <script>
+        // デフォルトメンバー
+        const DEFAULT_MEMBERS = ["中村さん", "藤江さん", "中井澤さん", "浅野"];
+        
+        // ローカルストレージのキー
+        const STORAGE_KEY = 'sprint-roulette-members';
+
+        // ルーレット関連の変数
+        let members = [];
+        let availableMembers = [];
+        const canvas = document.getElementById('rouletteCanvas');
+        const ctx = canvas.getContext('2d');
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#DDA0DD', '#87CEEB', '#F0E68C'];
+        let currentRotation = 0;
+        let isSpinning = false;
+        let sectorData = [];
+        let currentWinner = null;
+
+        // タイマー関連の変数
+        const TIMER_DURATION = 10 * 60;
+        let timeRemaining = TIMER_DURATION;
+        let timerInterval = null;
+        let isTimerRunning = false;
+        let alarmInterval = null;
+        let alarmCount = 0;
+        let timerStartTime = null;
+        let initialTimeRemaining = 0;
+
+        // デバッグモードのトグル
+        let debugMode = false;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'd' || e.key === 'D') {
+                debugMode = !debugMode;
+                document.getElementById('debugPanel').classList.toggle('active', debugMode);
+            }
+        });
+
+        // ローカルストレージからメンバーを読み込み
+        function loadMembers() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    members = JSON.parse(saved);
+                    if (!Array.isArray(members) || members.length === 0) {
+                        members = [...DEFAULT_MEMBERS];
+                    }
+                } catch (e) {
+                    members = [...DEFAULT_MEMBERS];
+                }
+            } else {
+                members = [...DEFAULT_MEMBERS];
+            }
+            availableMembers = [...members];
+        }
+
+        // ローカルストレージにメンバーを保存
+        function saveMembers() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(members));
+        }
+
+        // メンバーパネルを開く
+        function openMemberPanel() {
+            document.getElementById('memberPanel').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+            renderMemberList();
+        }
+
+        // メンバーパネルを閉じる
+        function closeMemberPanel() {
+            document.getElementById('memberPanel').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        }
+
+        // メンバーリストを描画
+        function renderMemberList() {
+            const list = document.getElementById('memberList');
+            
+            if (members.length === 0) {
+                list.innerHTML = '<li class="empty-message">メンバーがいません。<br>追加してください。</li>';
+                return;
+            }
+            
+            list.innerHTML = members.map((member, index) => `
+                <li class="member-item">
+                    <span>${member}</span>
+                    <button class="delete-member-btn" onclick="deleteMember(${index})">×</button>
+                </li>
+            `).join('');
+        }
+
+        // メンバーを追加
+        function addMember() {
+            const input = document.getElementById('newMemberInput');
+            const name = input.value.trim();
+            
+            if (name) {
+                members.push(name);
+                input.value = '';
+                renderMemberList();
+            }
+        }
+
+        // Enterキーでメンバー追加
+        function handleAddMemberKeypress(event) {
+            if (event.key === 'Enter') {
+                addMember();
+            }
+        }
+
+        // メンバーを削除
+        function deleteMember(index) {
+            members.splice(index, 1);
+            renderMemberList();
+        }
+
+        // 初期値に戻す
+        function resetToDefault() {
+            if (confirm('メンバーリストを初期値に戻しますか？')) {
+                members = [...DEFAULT_MEMBERS];
+                renderMemberList();
+            }
+        }
+
+        // 保存して閉じる
+        function saveMembersAndClose() {
+            saveMembers();
+            closeMemberPanel();
+            resetRoulette();
+        }
+
+        // セクターデータを構築
+        function buildSectorData() {
+            sectorData = [];
+            if (availableMembers.length === 0) return;
+            
+            const anglePerSector = (2 * Math.PI) / availableMembers.length;
+            
+            for (let i = 0; i < availableMembers.length; i++) {
+                const startAngle = -Math.PI / 2 + (i * anglePerSector);
+                const endAngle = startAngle + anglePerSector;
+                
+                sectorData.push({
+                    member: availableMembers[i],
+                    startAngle: startAngle,
+                    endAngle: endAngle,
+                    color: colors[i % colors.length],
+                    index: i
+                });
+            }
+        }
+
+        function drawRoulette() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 10;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (availableMembers.length === 0) {
+                ctx.fillStyle = '#f0f0f0';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = '#999';
+                ctx.font = '18px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('メンバーを追加してください', centerX, centerY);
+                return;
+            }
+            
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(currentRotation);
+
+            sectorData.forEach((sector) => {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, sector.startAngle, sector.endAngle);
+                ctx.closePath();
+                ctx.fillStyle = sector.color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.save();
+                const textAngle = (sector.startAngle + sector.endAngle) / 2;
+                ctx.rotate(textAngle);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 20px Arial';
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(sector.member, radius * 0.65, 0);
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        function getWinnerSector() {
+            if (sectorData.length === 0) return null;
+            
+            const ARROW_POSITION = -Math.PI / 2;
+            
+            for (let sector of sectorData) {
+                let currentStartAngle = sector.startAngle + currentRotation;
+                let currentEndAngle = sector.endAngle + currentRotation;
+                
+                currentStartAngle = normalizeAngle(currentStartAngle);
+                currentEndAngle = normalizeAngle(currentEndAngle);
+                
+                if (isAngleInSector(ARROW_POSITION, currentStartAngle, currentEndAngle)) {
+                    updateDebugInfo(sector.member, currentStartAngle, currentEndAngle, ARROW_POSITION);
+                    return sector.member;
+                }
+            }
+            
+            return sectorData[0].member;
+        }
+
+        function normalizeAngle(angle) {
+            while (angle > Math.PI) angle -= 2 * Math.PI;
+            while (angle < -Math.PI) angle += 2 * Math.PI;
+            return angle;
+        }
+
+        function isAngleInSector(targetAngle, startAngle, endAngle) {
+            if (startAngle > endAngle) {
+                return targetAngle >= startAngle || targetAngle <= endAngle;
+            } else {
+                return targetAngle >= startAngle && targetAngle <= endAngle;
+            }
+        }
+
+        function updateDebugInfo(winner, startAngle, endAngle, arrowAngle) {
+            if (debugMode) {
+                const info = `
+                    当選者: ${winner}<br>
+                    回転角: ${(currentRotation * 180 / Math.PI).toFixed(1)}°<br>
+                    セクター開始: ${(startAngle * 180 / Math.PI).toFixed(1)}°<br>
+                    セクター終了: ${(endAngle * 180 / Math.PI).toFixed(1)}°<br>
+                    矢印位置: ${(arrowAngle * 180 / Math.PI).toFixed(1)}°<br>
+                    タイマー: ${formatTime(timeRemaining)}
+                `;
+                document.getElementById('debugInfo').innerHTML = info;
+            }
+        }
+
+        function spinRoulette() {
+            if (isSpinning) return;
+            
+            if (availableMembers.length === 0) {
+                document.getElementById("resultText").textContent = "全員発表済み！リセットしてください。";
+                return;
+            }
+
+            isSpinning = true;
+            document.getElementById('spinButton').disabled = true;
+            document.getElementById("resultText").textContent = "回転中...";
+            document.getElementById('arrow').classList.add('spinning');
+
+            const spinDuration = 4000;
+            const spinRotations = 5 + Math.random() * 3;
+            const totalRotation = spinRotations * 2 * Math.PI + Math.random() * 2 * Math.PI;
+
+            const startTime = Date.now();
+            const startRotation = currentRotation;
+
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / spinDuration, 1);
+                
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                
+                currentRotation = startRotation + totalRotation * easeOut;
+                drawRoulette();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    document.getElementById('arrow').classList.remove('spinning');
+                    currentRotation = normalizeAngle(currentRotation);
+                    
+                    const selected = getWinnerSector();
+                    currentWinner = selected;
+                    
+                    if (!selected) {
+                        document.getElementById("resultText").textContent = "エラーが発生しました。";
+                    } else {
+                        document.getElementById("resultText").innerHTML = 
+                            `🎉 <span class="winner">${selected}</span> に決定！`;
+                        
+                        availableMembers = availableMembers.filter(member => member !== selected);
+                        buildSectorData();
+                        
+                        document.getElementById("remainingText").textContent = 
+                            `残り: ${availableMembers.length}人`;
+                    }
+                    
+                    isSpinning = false;
+                    document.getElementById('spinButton').disabled = false;
+                    
+                    if (availableMembers.length > 0) {
+                        setTimeout(() => {
+                            drawRoulette();
+                        }, 2000);
+                    }
+                }
+            }
+
+            animate();
+        }
+
+        function resetRoulette() {
+            availableMembers = [...members];
+            currentRotation = 0;
+            isSpinning = false;
+            currentWinner = null;
+            buildSectorData();
+            document.getElementById('spinButton').disabled = false;
+            document.getElementById("resultText").textContent = "ボタンを押してスタート！";
+            document.getElementById("remainingText").textContent = `残り: ${availableMembers.length}人`;
+            document.getElementById('arrow').classList.remove('spinning');
+            drawRoulette();
+        }
+
+        // タイマー関連の関数
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimerDisplay() {
+            const display = document.getElementById('timerDisplay');
+            display.textContent = formatTime(timeRemaining);
+            
+            display.classList.remove('warning', 'danger');
+            if (timeRemaining <= 30) {
+                display.classList.add('danger');
+            } else if (timeRemaining <= 120) {
+                display.classList.add('warning');
+            }
+            
+            if (timeRemaining === 0) {
+                stopTimer();
+                showTimeUpNotification();
+                startAlarm();
+            }
+        }
+
+        function showTimeUpNotification() {
+            document.getElementById('timeUpNotification').classList.add('active');
+        }
+
+        function dismissTimeUpNotification() {
+            document.getElementById('timeUpNotification').classList.remove('active');
+            stopAlarm();
+            resetTimer();
+        }
+
+        function startAlarm() {
+            playSound();
+            alarmCount = 1;
+            
+            alarmInterval = setInterval(() => {
+                if (alarmCount < 10) {
+                    playSound();
+                    alarmCount++;
+                } else {
+                    stopAlarm();
+                }
+            }, 1000);
+        }
+
+        function stopAlarm() {
+            if (alarmInterval) {
+                clearInterval(alarmInterval);
+                alarmInterval = null;
+                alarmCount = 0;
+            }
+        }
+
+        function startTimer() {
+            if (!isTimerRunning) {
+                isTimerRunning = true;
+                timerStartTime = Date.now();
+                initialTimeRemaining = timeRemaining;
+                
+                document.getElementById('startTimer').disabled = true;
+                document.getElementById('stopTimer').disabled = false;
+                
+                timerInterval = setInterval(() => {
+                    const elapsedSeconds = Math.floor((Date.now() - timerStartTime) / 1000);
+                    timeRemaining = Math.max(0, initialTimeRemaining - elapsedSeconds);
+                    updateTimerDisplay();
+                }, 100);
+            }
+        }
+
+        function stopTimer() {
+            if (isTimerRunning) {
+                isTimerRunning = false;
+                clearInterval(timerInterval);
+                
+                document.getElementById('startTimer').disabled = false;
+                document.getElementById('stopTimer').disabled = true;
+            }
+        }
+
+        function resetTimer() {
+            stopTimer();
+            stopAlarm();
+            document.getElementById('timeUpNotification').classList.remove('active');
+            timeRemaining = TIMER_DURATION;
+            timerStartTime = null;
+            initialTimeRemaining = 0;
+            updateTimerDisplay();
+            document.getElementById('startTimer').disabled = false;
+            document.getElementById('stopTimer').disabled = true;
+        }
+
+        function playSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 880;
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        // 初期化
+        loadMembers();
+        buildSectorData();
+        drawRoulette();
+        updateTimerDisplay();
+        document.getElementById('stopTimer').disabled = true;
+        document.getElementById("remainingText").textContent = `残り: ${availableMembers.length}人`;
+        
+        console.log('ルーレット&タイマー初期化完了');
+        console.log('デバッグモードは D キーで切り替え可能');
+    </script>
+</body>
+</html>
